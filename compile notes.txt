@@ -1,0 +1,5 @@
+open x64 Native Tools Command Prompt for VS 2019
+
+cl.exe /LD <files-to-compile>
+or
+cl.exe /D_USRDLL /D_WINDLL <files-to-compile> <files-to-link> /link /DLL /OUT:<desired-dll-name>.dll
