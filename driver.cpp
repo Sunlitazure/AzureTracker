@@ -68,16 +68,32 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 		
 		string GetSerialNumber() const { return m_sSerialNumber; }
 		
+		
+		DriverPose_t MakeDefaultPose(bool connected = true, bool tracking = true)
+		{
+			DriverPose_t out_pose = { 0 };
+			
+			out_pose.deviceIsConnected = connected;
+			out_pose.poseIsValid = tracking;
+			out_pose.result = tracking ? ETrackingResult::TrackingResult_Running_OK : ETrackingResult::TrackingResult_Running_OutOfRange;
+			out_pose.willDriftInYaw = false;
+			out_pose.shouldApplyHeadModel = false;
+			out_pose.qDriverFromHeadRotation.w = out_pose.qWorldFromDriverRotation.w = out_pose.qRotation.w = 1.0;
+			
+			return out_pose;
+		}
+		
 		void RunFrame()
 		{
-			//NEED TO IMPLEMENT--------------------------
+			DriverPose_t pose = MakeDefaultPose();
+			
+			last_pose = pose;
 		}
 		
 		virtual DriverPose_t GetPose()
 		{
-			//NEED TO IMPLEMENT--------------------------
-			DriverPose_t pose = {0};
-			return pose;
+			DriverLog("updating pose");
+			return last_pose;
 		}
 			
 	private:
@@ -85,6 +101,7 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 		PropertyContainerHandle_t prop;
 		string m_sSerialNumber;
 		string m_sModelNumber;
+		DriverPose_t last_pose = MakeDefaultPose();
 };
 
 

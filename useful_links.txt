@@ -1,0 +1,10 @@
+https://github.com/ValveSoftware/openvr/wiki/Driver-Documentation
+https://github.com/ValveSoftware/openvr/blob/master/samples/driver_sample/driver_sample.cpp
+https://github.com/ValveSoftware/openvr/blob/master/headers/openvr_driver.h
+https://github.com/terminal29/Simple-OpenVR-Driver-Tutorial/blob/master/driver_files/src/Driver/VRDriver.cpp
+https://github.com/terminal29/Simple-OpenVR-Driver-Tutorial/blob/master/driver_files/src/Driver/TrackerDevice.cpp
+https://github.com/r57zone/OpenVR-driver-for-DIY/tree/master/OpenVR/samples/driver_sample
+https://github.com/ValveSoftware/driver_hydra/blob/master/drivers/driver_hydra/driver_hydra.cpp#L762
+https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md
+http://doc-ok.org/?p=1478
+https://github.com/ashtuchkin/vive-diy-position-sensor
