@@ -1,10 +1,18 @@
 
 #include <iostream>
+#include <thread>
+#include <windows.h>
+#include <stdafx.h>
+#include <enumser.h>
 #include "driver.hpp"
 #include "driverlog.h"
 
+
 using namespace std;
 using namespace vr;
+
+
+
 
 class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 {
@@ -43,7 +51,6 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 			VRProperties()->SetStringProperty(prop, Prop_NamedIconPathDeviceAlertLow_String, "{AzureTracker}/icons/tracker_not_ready.png");
 			
 			return VRInitError_None;
-			
 		}
 		
 		virtual void Deactivate()
@@ -67,7 +74,6 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 		}
 		
 		string GetSerialNumber() const { return m_sSerialNumber; }
-		
 		
 		DriverPose_t MakeDefaultPose(bool connected = true, bool tracking = true)
 		{
@@ -118,6 +124,11 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 
 
 
+
+
+
+
+
 class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 {
 	public:
@@ -128,12 +139,14 @@ class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 		virtual bool ShouldBlockStandbyMode() {return false;}
 		virtual void EnterStandby() {}
 		virtual void LeaveStandby() {}
+		void updateTracking();
 	
 
 	private:
 		TrackerDeviceDriver *m_pTrackerW = nullptr;
 		TrackerDeviceDriver *m_pTrackerL = nullptr;
 		TrackerDeviceDriver *m_pTrackerR = nullptr;
+		bool isTracking = false;
 
 };
 
@@ -153,13 +166,17 @@ EVRInitError ServerDriver_AzureTracker::Init(IVRDriverContext *pDriverContext)
 	
 	m_pTrackerR = new TrackerDeviceDriver("TCKR_r");
 	VRServerDriverHost()->TrackedDeviceAdded(m_pTrackerR->GetSerialNumber().c_str(), TrackedDeviceClass_GenericTracker, m_pTrackerR);
-
+	
+	//Creates thread of updateTracking, on this object instance.
+	thread th1(&ServerDriver_AzureTracker::updateTracking, this);
 	
 	return VRInitError_None;
 }
 
 void ServerDriver_AzureTracker::Cleanup()
 {
+	isTracking = false;
+	
 	CleanupDriverLog();
 
 	delete m_pTrackerW;
@@ -168,12 +185,10 @@ void ServerDriver_AzureTracker::Cleanup()
 	m_pTrackerL = NULL;
 	delete m_pTrackerR;
 	m_pTrackerR = NULL;
-
 }
 
 void ServerDriver_AzureTracker::RunFrame()
 {
-
 	if(m_pTrackerW)
 	{
 		m_pTrackerW->RunFrame();
@@ -186,13 +201,44 @@ void ServerDriver_AzureTracker::RunFrame()
 	{
 		m_pTrackerR->RunFrame();
 	}
+}
 
+void ServerDriver_AzureTracker::updateTracking()
+{
+	HRESULT hr = CoInitialize(nullptr);
+	if (FAILED(hr))
+	{
+		DriverLog("Failed to initialize COM");
+	}
+	hr = CoInitializeSecurity(nullptr, -1, nullptr, nullptr, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_NONE, nullptr);
+	if (FAILED(hr))
+	{
+		DriverLog("Failed to initialize COM");
+	}
+	
+	CEnumerateSerial::CPortsArray ports;
+	CEnumerateSerial::CNamesArray names;
+	CEnumerateSerial::CPortAndNamesArray portAndNames;
+	
+	hr = CEnumerateSerial::UsingWMI(portAndNames);
+	if (SUCCEEDED(hr))
+	{
+		for (const auto& port : portAndNames)
+			DriverLog("COM%u <%s>\n", port.first, port.second.c_str());
+	}
+	else
+		DriverLog("Using WMI failed");
+	
+	//HANDLE serialHandle = CreateFile("
+	
+	isTracking = true;
+	while(isTracking)
+	{
+		
+	}
 }
 
 ServerDriver_AzureTracker g_serverDriverNull;
-
-
-
 
 
 

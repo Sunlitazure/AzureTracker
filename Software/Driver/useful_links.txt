@@ -8,3 +8,5 @@ https://github.com/ValveSoftware/driver_hydra/blob/master/drivers/driver_hydra/d
 https://github.com/nairol/LighthouseRedox/blob/master/docs/Light%20Emissions.md
 http://doc-ok.org/?p=1478
 https://github.com/ashtuchkin/vive-diy-position-sensor
+https://www.youtube.com/watch?v=Ikv8o0u6w9o
+

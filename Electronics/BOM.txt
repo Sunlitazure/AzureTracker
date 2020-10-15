@@ -1,0 +1,2 @@
+
+BPV22NF     photodiode        https://www.vishay.com/docs/81509/bpv22nf.pdf
