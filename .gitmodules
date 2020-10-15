@@ -1,0 +1,3 @@
+[submodule "Software/Driver/library/openvr"]
+	path = Software/Driver/library/openvr
+	url = https://github.com/ValveSoftware/openvr
