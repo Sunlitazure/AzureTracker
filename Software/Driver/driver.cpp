@@ -140,6 +140,7 @@ class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 		virtual void EnterStandby() {}
 		virtual void LeaveStandby() {}
 		void updateTracking();
+		void threadTest();
 	
 
 	private:
@@ -147,6 +148,7 @@ class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 		TrackerDeviceDriver *m_pTrackerL = nullptr;
 		TrackerDeviceDriver *m_pTrackerR = nullptr;
 		bool isTracking = false;
+		thread *th1;
 
 };
 
@@ -168,7 +170,9 @@ EVRInitError ServerDriver_AzureTracker::Init(IVRDriverContext *pDriverContext)
 	VRServerDriverHost()->TrackedDeviceAdded(m_pTrackerR->GetSerialNumber().c_str(), TrackedDeviceClass_GenericTracker, m_pTrackerR);
 	
 	//Creates thread of updateTracking, on this object instance.
-	thread th1(&ServerDriver_AzureTracker::updateTracking, this);
+	//thread th1(&ServerDriver_AzureTracker::updateTracking, this);
+	th1 = new thread(&ServerDriver_AzureTracker::updateTracking, this);
+	
 	
 	return VRInitError_None;
 }
@@ -176,6 +180,12 @@ EVRInitError ServerDriver_AzureTracker::Init(IVRDriverContext *pDriverContext)
 void ServerDriver_AzureTracker::Cleanup()
 {
 	isTracking = false;
+	if(th1)
+	{
+		th1->join();
+		delete th1;
+		th1 = nullptr;
+	}
 	
 	CleanupDriverLog();
 
@@ -203,17 +213,29 @@ void ServerDriver_AzureTracker::RunFrame()
 	}
 }
 
+void ServerDriver_AzureTracker::threadTest()
+{
+	int x;
+	while(0)
+	{
+		x = 1;
+	}
+}
+
 void ServerDriver_AzureTracker::updateTracking()
 {
 	HRESULT hr = CoInitialize(nullptr);
 	if (FAILED(hr))
 	{
-		DriverLog("Failed to initialize COM");
+		DriverLog("Failed to initialize COM, Error:%x\n", static_cast<unsigned int>(hr));
+		return;
 	}
 	hr = CoInitializeSecurity(nullptr, -1, nullptr, nullptr, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_NONE, nullptr);
 	if (FAILED(hr))
 	{
-		DriverLog("Failed to initialize COM");
+		DriverLog("Failed to initialize COM security, Error:%08X\n", static_cast<unsigned int>(hr));
+		CoUninitialize();
+		return;
 	}
 	
 	CEnumerateSerial::CPortsArray ports;
@@ -227,7 +249,10 @@ void ServerDriver_AzureTracker::updateTracking()
 			DriverLog("COM%u <%s>\n", port.first, port.second.c_str());
 	}
 	else
-		DriverLog("Using WMI failed");
+	{
+		DriverLog("CEnumerateSerial::UsingWMI failed, Error:%08X\n", static_cast<unsigned int>(hr));
+		return;
+	}
 	
 	//HANDLE serialHandle = CreateFile("
 	
@@ -250,8 +275,17 @@ ServerDriver_AzureTracker g_serverDriverNull;
 
 
 
+
+
+
+
+
+
+
+
+
 void *HmdDriverFactory (const char *pInterfaceName, int *pReturnCode)
-{
+{	
 	if (strcmp(pInterfaceName, IServerTrackedDeviceProvider_Version) == 0)
 	{
 		return &g_serverDriverNull;
