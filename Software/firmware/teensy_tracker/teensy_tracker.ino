@@ -6,6 +6,11 @@
                                     //id, address
 Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 
+#define BUFLEN 64
+
+char inBuf[BUFLEN];
+int ptr;
+
 void setup()
 {
   Serial.begin(115200);
@@ -19,9 +24,19 @@ void setup()
 
     delay(1000);
   }
+
+  ptr = 0;
 }
 
 void loop() {
+
+  while(Serial.available() > 0) {
+    inBuf[ptr] = Serial.read();
+    ++ptr;
+  }
+  ptr = 0;
+
+  processCmd();
 
   sensors_event_t orientationData, // abs euler vector, 360 degree sphere
                   angVelocityData, // rotation speed, rad/s
@@ -39,4 +54,16 @@ void loop() {
 
 
   delay(1000);
+}
+
+
+
+
+void processCmd()
+{
+  int i;
+  for(i=0; i < BUFLEN; ++i)
+  {
+    
+  }
 }

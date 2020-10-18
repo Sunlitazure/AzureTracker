@@ -141,6 +141,7 @@ class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 		virtual void LeaveStandby() {}
 		void updateTracking();
 		void threadTest();
+		void startSerial(unsigned int portNum);
 	
 
 	private:
@@ -148,6 +149,7 @@ class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 		TrackerDeviceDriver *m_pTrackerL = nullptr;
 		TrackerDeviceDriver *m_pTrackerR = nullptr;
 		bool isTracking = false;
+		HANDLE serialHandle = nullptr;
 		thread *th1;
 
 };
@@ -186,6 +188,8 @@ void ServerDriver_AzureTracker::Cleanup()
 		delete th1;
 		th1 = nullptr;
 	}
+	
+	CloseHandle(serialHandle);
 	
 	CleanupDriverLog();
 
@@ -246,7 +250,38 @@ void ServerDriver_AzureTracker::updateTracking()
 	if (SUCCEEDED(hr))
 	{
 		for (const auto& port : portAndNames)
+		{
 			DriverLog("COM%u <%s>\n", port.first, port.second.c_str());
+			//ex: COM3 <USB Serial Device (COM3)>
+			startSerial(port.first);
+			if(serialHandle == (HANDLE)-1)
+			{
+				CloseHandle(serialHandle);
+				continue; //failed to open the port, move on
+			}
+			
+			char outBuf[] = "getTrackerInfo";
+			DWORD bytesWrite = sizeof(outBuf);
+			bool writeStat = WriteFile(serialHandle, outBuf, bytesWrite, &bytesWrite, NULL);
+			if(!writeStat)
+			{
+				CloseHandle(serialHandle);
+				continue; //serial write failed
+			}
+			
+			const uint8_t bufSize = 100;
+			char inBuf[bufSize];
+			DWORD bytesRead;
+			bool readStat = ReadFile(serialHandle, inBuf, bufSize, &bytesRead, NULL);
+			if(!readStat)
+			{
+				CloseHandle(serialHandle);
+				continue; //serial read failed
+			}
+			
+			//process inBuf code
+			
+		}
 	}
 	else
 	{
@@ -254,14 +289,41 @@ void ServerDriver_AzureTracker::updateTracking()
 		return;
 	}
 	
-	//HANDLE serialHandle = CreateFile("
-	
 	isTracking = true;
 	while(isTracking)
 	{
 		
 	}
 }
+
+void ServerDriver_AzureTracker::startSerial(unsigned int portNum)
+{
+	string portString = "\\\\.\\COM" + to_string(portNum);
+	LPTSTR portName = new TCHAR[portString.size() +1];
+	strcpy(portName, portString.c_str());
+	serialHandle = CreateFile(portName, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	
+	DCB serialParams = { 0 };
+	serialParams.DCBlength = sizeof(serialParams);
+	
+	GetCommState(serialHandle, &serialParams);
+	serialParams.BaudRate = 115200;
+	serialParams.ByteSize = 8;
+	serialParams.StopBits = ONESTOPBIT;
+	serialParams.Parity = NOPARITY;
+	SetCommState(serialHandle, &serialParams);
+	
+	COMMTIMEOUTS timeout = {0};
+	timeout.ReadIntervalTimeout = 50;
+	timeout.ReadTotalTimeoutConstant = 50;
+	timeout.WriteTotalTimeoutConstant = 50;
+	timeout.WriteTotalTimeoutMultiplier = 10;
+	
+	SetCommTimeouts(serialHandle, &timeout);
+	
+	PurgeComm(serialHandle, PURGE_TXABORT|PURGE_RXABORT|PURGE_TXCLEAR|PURGE_RXCLEAR);
+}
+
 
 ServerDriver_AzureTracker g_serverDriverNull;
 
