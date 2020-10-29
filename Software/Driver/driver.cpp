@@ -280,7 +280,6 @@ void ServerDriver_AzureTracker::updateTracking()
 			}
 			
 			//process inBuf code
-			
 		}
 	}
 	else
