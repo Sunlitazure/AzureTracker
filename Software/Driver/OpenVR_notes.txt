@@ -1,0 +1,8 @@
+
+
+Default pose position 0,0,0 is centered on the slave lighthouse ('c') and is facing the same direction as the lighthouse in the horizontal plane. In the vertical plane it is parallel the floor.
+
+lighhouse signal does masterGlobalFlash - slaveGlobalFlash -- active laser pulse - repeat
+
+
+

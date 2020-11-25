@@ -12,7 +12,7 @@ Adafruit_BNO055 bno = Adafruit_BNO055(55, 0x28);
 
 void processCmd();
 
-char inBuf[BUFLEN];
+char inBuf[BUFLEN], bufHistory[BUFLEN];
 int ptr;
 sensors_event_t orientationData, // abs euler vector, 360 degree sphere
                 angVelocityData, // rotation speed, rad/s
@@ -44,6 +44,7 @@ void setup()
 void loop() {
   if(Serial.available() > 0)
   {
+    memcpy(bufHistory, inBuf, BUFLEN);
     while(Serial.available() > 0) {
       inBuf[ptr] = Serial.read();
 
@@ -59,6 +60,7 @@ void loop() {
         ++ptr;
       }
     }
+   
   }
 
   bno.getEvent(&orientationData, Adafruit_BNO055::VECTOR_EULER);
@@ -72,17 +74,31 @@ void loop() {
 }
 
 
-bool trackerInfo(const char *argstr)
+bool testCmd(const char *argstr)
 {
   Serial.println("This Is A Test");
-  Serial.println(argstr);
+  Serial.println(argstr + 1);
+  return 0;
+}
+
+bool trackerInfoCmd(const char *argstr)
+{
+  Serial.println("AzureTracker_Hw1");
+  return 0;
+}
+
+bool inBufCmd(const char *argstr)
+{
+  Serial.println(bufHistory);
   return 0;
 }
 
 
 Cmd cmd[] = 
   {
-    {"getTrackerInfo", trackerInfo},
+    {"getTrackerInfo", trackerInfoCmd},
+    {"test", testCmd,},
+    {"inBuf", inBufCmd},
   };
 
 

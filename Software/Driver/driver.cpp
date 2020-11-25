@@ -33,7 +33,8 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 			prop = VRProperties()->TrackedDeviceToPropertyContainer(m_unObjectId);
 			
 			VRProperties()->SetStringProperty(prop, Prop_ModelNumber_String, m_sModelNumber.c_str());
-			VRProperties()->SetStringProperty(prop, Prop_RenderModelName_String, m_sModelNumber.c_str());
+									//{AzureTracker} is syntax to let it know to look in our own driver, not the default
+			VRProperties()->SetStringProperty(prop, Prop_RenderModelName_String, "{AzureTracker}example_controller");
 			VRProperties()->SetStringProperty(prop, Prop_TrackingSystemName_String, "Azure Tracking");
 			
 			VRProperties()->SetUint64Property(prop, Prop_CurrentUniverseId_Uint64, 2);
@@ -92,13 +93,16 @@ class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 		void RunFrame()
 		{
 			DriverPose_t pose = MakeDefaultPose();
+			//pose.vecPosition[1] = 2.0;
 			
 			last_pose = pose;
+			
+			if(m_unObjectId != k_unTrackedDeviceIndexInvalid)
+				VRServerDriverHost()->TrackedDevicePoseUpdated( m_unObjectId, GetPose(), sizeof( DriverPose_t));
 		}
 		
 		virtual DriverPose_t GetPose()
 		{
-			DriverLog("updating pose");
 			return last_pose;
 		}
 			
@@ -140,7 +144,6 @@ class ServerDriver_AzureTracker : public IServerTrackedDeviceProvider
 		virtual void EnterStandby() {}
 		virtual void LeaveStandby() {}
 		void updateTracking();
-		void threadTest();
 		void startSerial(unsigned int portNum);
 	
 
@@ -203,26 +206,21 @@ void ServerDriver_AzureTracker::Cleanup()
 
 void ServerDriver_AzureTracker::RunFrame()
 {
-	if(m_pTrackerW)
-	{
-		m_pTrackerW->RunFrame();
-	}
-	if(m_pTrackerL)
-	{
-		m_pTrackerL->RunFrame();
-	}
-	if(m_pTrackerR)
-	{
-		m_pTrackerR->RunFrame();
-	}
-}
-
-void ServerDriver_AzureTracker::threadTest()
-{
-	int x;
-	while(0)
-	{
-		x = 1;
+	isTracking = true;
+	if(isTracking)
+		{
+		if(m_pTrackerW)
+		{
+			m_pTrackerW->RunFrame();
+		}
+		if(m_pTrackerL)
+		{
+			m_pTrackerL->RunFrame();
+		}
+		if(m_pTrackerR)
+		{
+			m_pTrackerR->RunFrame();
+		}
 	}
 }
 
@@ -270,9 +268,25 @@ void ServerDriver_AzureTracker::updateTracking()
 			}
 			
 			const uint8_t bufSize = 100;
+			char tempChar;
 			char inBuf[bufSize];
 			DWORD bytesRead;
-			bool readStat = ReadFile(serialHandle, inBuf, bufSize, &bytesRead, NULL);
+			int i = 0;
+			bool readStat;
+			
+			Sleep(50);
+			
+			do{
+				readStat = ReadFile(serialHandle, &tempChar, sizeof(tempChar), &bytesRead, NULL);
+				if(!readStat)
+				{
+					break;
+				}
+				
+				inBuf[i] = tempChar;
+				i++;
+			} while (bytesRead > 0);
+				
 			if(!readStat)
 			{
 				CloseHandle(serialHandle);
@@ -280,18 +294,26 @@ void ServerDriver_AzureTracker::updateTracking()
 			}
 			
 			//process inBuf code
+			char model[] = "AzureTracker_Hw1";
+			DriverLog("Tracker Model: %s\n", inBuf);
+			DriverLog("Match: %d\n", (int)(strncmp(model, inBuf, strlen(model)) == 0));
+			if(strncmp(model, inBuf, strlen(model)) == 0)
+			{
+				isTracking = true;
+				while(isTracking)
+				{
+					RunFrame();
+					Sleep(50);
+				}
+			}
+			
+			CloseHandle(serialHandle);
 		}
 	}
 	else
 	{
 		DriverLog("CEnumerateSerial::UsingWMI failed, Error:%08X\n", static_cast<unsigned int>(hr));
 		return;
-	}
-	
-	isTracking = true;
-	while(isTracking)
-	{
-		
 	}
 }
 
@@ -300,7 +322,7 @@ void ServerDriver_AzureTracker::startSerial(unsigned int portNum)
 	string portString = "\\\\.\\COM" + to_string(portNum);
 	LPTSTR portName = new TCHAR[portString.size() +1];
 	strcpy(portName, portString.c_str());
-	serialHandle = CreateFile(portName, GENERIC_READ | GENERIC_WRITE, 0, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0);
+	serialHandle = CreateFile(portName, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
 	
 	DCB serialParams = { 0 };
 	serialParams.DCBlength = sizeof(serialParams);
@@ -310,17 +332,21 @@ void ServerDriver_AzureTracker::startSerial(unsigned int portNum)
 	serialParams.ByteSize = 8;
 	serialParams.StopBits = ONESTOPBIT;
 	serialParams.Parity = NOPARITY;
+	//serialParams.fDtrControl = DTR_CONTROL_ENABLE;
 	SetCommState(serialHandle, &serialParams);
 	
 	COMMTIMEOUTS timeout = {0};
-	timeout.ReadIntervalTimeout = 50;
-	timeout.ReadTotalTimeoutConstant = 50;
+	timeout.ReadIntervalTimeout = 2000;
+	timeout.ReadTotalTimeoutMultiplier = 500;
+	timeout.ReadTotalTimeoutConstant = 100;
 	timeout.WriteTotalTimeoutConstant = 50;
 	timeout.WriteTotalTimeoutMultiplier = 10;
 	
 	SetCommTimeouts(serialHandle, &timeout);
 	
-	PurgeComm(serialHandle, PURGE_TXABORT|PURGE_RXABORT|PURGE_TXCLEAR|PURGE_RXCLEAR);
+	PurgeComm(serialHandle, PURGE_TXCLEAR|PURGE_RXCLEAR);
+	
+	Sleep(50);
 }
 
 

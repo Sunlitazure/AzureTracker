@@ -11,3 +11,19 @@ In CMD navigate to the "tracker_driver" directory
 Run `build`
 
 Copy the "AzureTracker" directory that's inside "build" to "C:\Program Files (x86)\Steam\steamapps\common\SteamVR\drivers"
+
+
+
+### Install Compiled Driver
+
+copy AzureTracker driver into 
+C:\Program Files (x86)\Steam\steamapps\common\SteamVR\drivers
+
+
+This step might not be necessary:
+In C:\Program Files (x86)\Steam\config\steamvr.vrsettings add
+"activateMultipleDrivers": true
+as an item to "steamvr", following proper json syntax.
+
+
+
