@@ -226,6 +226,27 @@ void ServerDriver_AzureTracker::RunFrame()
 
 void ServerDriver_AzureTracker::updateTracking()
 {
+	Sleep(10000); //Need to wait for all of the devices to initialize first.
+	
+	
+	//Get position of lighthouses and HMD
+	//VRServerDriverHost()->GetRawTrackedDevicePoses
+	//ETrackedDeviceClass deviceType = VRSystem()->GetTrackedDeviceClass(0);
+	TrackedDevicePose_t poseArray[k_unMaxTrackedDeviceCount];
+	VRServerDriverHost()->GetRawTrackedDevicePoses(0, poseArray, k_unMaxTrackedDeviceCount);
+	
+	int i;
+	for(i=0; i<k_unMaxTrackedDeviceCount; i++)
+	{
+		PropertyContainerHandle_t propHandle = VRProperties()->TrackedDeviceToPropertyContainer(i);
+		int32_t deviceType = VRProperties()->GetInt32Property(propHandle, ETrackedDeviceProperty::Prop_DeviceClass_Int32);
+		// ETrackedDeviceClass
+		
+		DriverLog("Device Type: %d", deviceType);
+	}
+	
+	
+	
 	HRESULT hr = CoInitialize(nullptr);
 	if (FAILED(hr))
 	{
