@@ -1,8 +1,13 @@
 
 
-Default pose position 0,0,0 is centered on the slave lighthouse ('c') and is facing the same direction as the lighthouse in the horizontal plane. In the vertical plane it is parallel the floor.
+Default pose position 0,0,0 is centered on the slave lighthouse ('c') and is facing the same direction as the lighthouse in the horizontal plane. In the vertical plane it is parallel the floor. HMD and master poses are in reference to the slave position.
 
-lighhouse signal does masterGlobalFlash - slaveGlobalFlash -- active laser pulse - repeat
+(in meters)
+y = vertical up
+x = right from view of slave lighthouse
+-z = front of slave lighthouse 
+
+lighhouse signal does: masterGlobalFlash - slaveGlobalFlash -- active laser pulse - repeat
 
 
 
@@ -29,3 +34,21 @@ vector.v[2] = matrix.m[2][3];
 
 return vector;
 }
+
+
+
+
+
+
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: Device Type: HMD, 1
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: X: -0.169036, Y: -2.189172, Z: -1.883133
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: Device Type: GenericTracker, 3
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: X: 0.000000, Y: 0.000000, Z: 0.000000
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: Device Type: GenericTracker, 3
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: X: 0.000000, Y: 0.000000, Z: 0.000000
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: Device Type: GenericTracker, 3
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: X: 0.000000, Y: 0.000000, Z: 0.000000
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: Device Type: TrackingReference, 4
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: X: -0.062541, Y: 0.032229, Z: -3.746331
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: Device Type: TrackingReference, 4
+Sat Nov 28 2020 02:16:15.850 - AzureTracker: X: 0.000000, Y: 0.000000, Z: 0.000000

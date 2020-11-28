@@ -13,6 +13,41 @@ using namespace vr;
 
 
 
+char deviceTypeName[][20] = {"Invalid",
+								 "HMD",
+								 "Controller",
+								 "GenericTracker",
+								 "TrackingReference",
+								 "DisplayRedirect"
+								 };
+
+
+
+position3d matrix34ToQuart(HmdMatrix34_t absTracking)
+{
+	position3d pos;
+	
+	float w,x,y,z;
+	w = sqrt(fmax(0, 1 + absTracking.m[0][0] + absTracking.m[1][1]+ absTracking.m[2][2])) / 2;
+	x = sqrt(fmax(0, 1 + absTracking.m[0][0] - absTracking.m[1][1] - absTracking.m[2][2])) / 2;
+	y = sqrt(fmax(0, 1 - absTracking.m[0][0] + absTracking.m[1][1] - absTracking.m[2][2])) / 2;
+	z = sqrt(fmax(0, 1 - absTracking.m[0][0] - absTracking.m[1][1] + absTracking.m[2][2])) / 2;
+	x = copysign(x, absTracking.m[2][1] - absTracking.m[1][2]);
+	y = copysign(y, absTracking.m[0][2] - absTracking.m[2][0]);
+	z = copysign(z, absTracking.m[1][0] - absTracking.m[0][1]);
+	
+	float xyzw[] = {x, y, z, w};
+	memcpy(pos.xyzw, xyzw, sizeof(xyzw));
+	
+	float xyz[] = {absTracking.m[0][3], absTracking.m[1][3], absTracking.m[2][3]};
+	memcpy(pos.pos_xyz, xyz, sizeof(xyz));
+	
+	return pos;
+}
+
+
+
+
 
 class TrackerDeviceDriver : public ITrackedDeviceServerDriver
 {
@@ -206,32 +241,27 @@ void ServerDriver_AzureTracker::Cleanup()
 
 void ServerDriver_AzureTracker::RunFrame()
 {
-	isTracking = true;
-	if(isTracking)
-		{
-		if(m_pTrackerW)
-		{
-			m_pTrackerW->RunFrame();
-		}
-		if(m_pTrackerL)
-		{
-			m_pTrackerL->RunFrame();
-		}
-		if(m_pTrackerR)
-		{
-			m_pTrackerR->RunFrame();
-		}
+	if(m_pTrackerW)
+	{
+		m_pTrackerW->RunFrame();
+	}
+	if(m_pTrackerL)
+	{
+		m_pTrackerL->RunFrame();
+	}
+	if(m_pTrackerR)
+	{
+		m_pTrackerR->RunFrame();
 	}
 }
 
+//Only ever runs in a separate thread
 void ServerDriver_AzureTracker::updateTracking()
 {
 	Sleep(10000); //Need to wait for all of the devices to initialize first.
 	
 	
 	//Get position of lighthouses and HMD
-	//VRServerDriverHost()->GetRawTrackedDevicePoses
-	//ETrackedDeviceClass deviceType = VRSystem()->GetTrackedDeviceClass(0);
 	TrackedDevicePose_t poseArray[k_unMaxTrackedDeviceCount];
 	VRServerDriverHost()->GetRawTrackedDevicePoses(0, poseArray, k_unMaxTrackedDeviceCount);
 	
@@ -242,37 +272,26 @@ void ServerDriver_AzureTracker::updateTracking()
 		int32_t deviceType = VRProperties()->GetInt32Property(propHandle, ETrackedDeviceProperty::Prop_DeviceClass_Int32);
 		// ETrackedDeviceClass
 		
-		DriverLog("Device Type: %d", deviceType);
+		if(deviceType != ETrackedDeviceClass::TrackedDeviceClass_Invalid)
+		{
+			DriverLog("Device Type: %s, %d", deviceTypeName[deviceType], deviceType);
+			position3d pos = matrix34ToQuart(poseArray[i].mDeviceToAbsoluteTracking);
+			DriverLog("X: %f, Y: %f, Z: %f", pos.pos_xyz[0], pos.pos_xyz[1], pos.pos_xyz[2]);
+		}
 	}
 	
 	
 	
-	HRESULT hr = CoInitialize(nullptr);
-	if (FAILED(hr))
-	{
-		DriverLog("Failed to initialize COM, Error:%x\n", static_cast<unsigned int>(hr));
-		return;
-	}
-	hr = CoInitializeSecurity(nullptr, -1, nullptr, nullptr, RPC_C_AUTHN_LEVEL_DEFAULT, RPC_C_IMP_LEVEL_IMPERSONATE, nullptr, EOAC_NONE, nullptr);
-	if (FAILED(hr))
-	{
-		DriverLog("Failed to initialize COM security, Error:%08X\n", static_cast<unsigned int>(hr));
-		CoUninitialize();
-		return;
-	}
+	
 	
 	CEnumerateSerial::CPortsArray ports;
-	CEnumerateSerial::CNamesArray names;
-	CEnumerateSerial::CPortAndNamesArray portAndNames;
-	
-	hr = CEnumerateSerial::UsingWMI(portAndNames);
-	if (SUCCEEDED(hr))
+	if(CEnumerateSerial::UsingCreateFile(ports))
 	{
-		for (const auto& port : portAndNames)
+		for (const auto& port : ports)
 		{
-			DriverLog("COM%u <%s>\n", port.first, port.second.c_str());
-			//ex: COM3 <USB Serial Device (COM3)>
-			startSerial(port.first);
+			DriverLog("COM%u\n", port);
+			//ex: COM3
+			startSerial(port);
 			if(serialHandle == (HANDLE)-1)
 			{
 				CloseHandle(serialHandle);
@@ -295,7 +314,7 @@ void ServerDriver_AzureTracker::updateTracking()
 			int i = 0;
 			bool readStat;
 			
-			Sleep(50);
+			Sleep(100);
 			
 			do{
 				readStat = ReadFile(serialHandle, &tempChar, sizeof(tempChar), &bytesRead, NULL);
@@ -317,8 +336,10 @@ void ServerDriver_AzureTracker::updateTracking()
 			//process inBuf code
 			char model[] = "AzureTracker_Hw1";
 			DriverLog("Tracker Model: %s\n", inBuf);
-			DriverLog("Match: %d\n", (int)(strncmp(model, inBuf, strlen(model)) == 0));
-			if(strncmp(model, inBuf, strlen(model)) == 0)
+			bool isValidModel = strncmp(model, inBuf, strlen(model)) == 0;
+			DriverLog("Match: %d\n", (int)isValidModel);
+			isValidModel = true;
+			if(isValidModel)
 			{
 				isTracking = true;
 				while(isTracking)
@@ -333,7 +354,7 @@ void ServerDriver_AzureTracker::updateTracking()
 	}
 	else
 	{
-		DriverLog("CEnumerateSerial::UsingWMI failed, Error:%08X\n", static_cast<unsigned int>(hr));
+		DriverLog("CEnumerateSerial::UsingCreateFile failed, Error:%u\n", GetLastError());
 		return;
 	}
 }
